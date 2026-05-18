@@ -1,52 +1,86 @@
-<!DOCTYPE html><html lang="fr">
+<!DOCTYPE html>
+<html lang="hat">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mon Site Web</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      background: linear-gradient(120deg, #4facfe, #00f2fe);
-      color: #fff;
-      text-align: center;
-    }
-    header {
-      padding: 50px 20px;
-    }
-    h1 {
-      font-size: 40px;
-      margin-bottom: 10px;
-    }
-    p {
-      font-size: 18px;
-      opacity: 0.9;
-    }
-    .btn {
-      display: inline-block;
-      margin-top: 20px;
-      padding: 12px 25px;
-      background: #fff;
-      color: #333;
-      border-radius: 25px;
-      text-decoration: none;
-      font-weight: bold;
-    }
-    footer {
-      position: absolute;
-      bottom: 20px;
-      width: 100%;
-      font-size: 14px;
-      opacity: 0.8;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Pro</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .login-container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            width: 300px;
+            text-align: center;
+        }
+        h2 { color: #333; margin-bottom: 20px; }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+            outline: none;
+        }
+        input:focus { border-color: #764ba2; }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #764ba2;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: 0.3s;
+        }
+        button:hover { background: #5a3a7e; }
+        #message { margin-top: 15px; font-size: 14px; }
+    </style>
 </head>
-<body>  <header>
-    <h1> WELCOME TO EROBLACK </h1>
-    <p> kontak nou se 4066-8847 </p>
-    <a class="btn" href="#">Klike la</a>
-  </header>  <footer>
-    © 2026 - EROBLACK 
-  </footer></body>
+<body>
+
+<div class="login-container">
+    <h2>Koneksyon</h2>
+    <input type="tel" id="phone" placeholder="Nimewo Telefòn (eg: 12345678)">
+    <input type="password" id="password" placeholder="Mot de passe">
+    <button onclick="valideLogin()">Konekte</button>
+    <p id="message"></p>
+</div>
+
+<script>
+    function valideLogin() {
+        const phone = document.getElementById('phone').value;
+        const pass = document.getElementById('password').value;
+        const msg = document.getElementById('message');
+
+        // Isit la ou ka chanje "1234" pou modpas ou vle a
+        const modpasKorek = "1234";
+
+        if (pass === modpasKorek) {
+            msg.style.color = "green";
+            msg.innerHTML = "Aksè Otoriize!";
+            
+            // Si w nan Sketchware, liy sa ap voye nimewo a nan Edittext la
+            if(window.Android) {
+                window.Android.voyeNimewo(phone);
+            }
+        } else {
+            msg.style.color = "red";
+            msg.innerHTML = "Mot de passe kòwonpi!";
+        }
+    }
+</script>
+
+</body>
 </html>
