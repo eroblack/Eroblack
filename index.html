@@ -3,22 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eroblack Edition</title>
+    <title>Eroblack Extreme - Final Edition</title>
     <style>
-        body { margin: 0; background: #0a0a0a; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; touch-action: none; }
+        body { margin: 0; background: #0a0a0a; color: white; font-family: sans-serif; overflow: hidden; touch-action: none; }
         canvas { display: block; z-index: 2; position: relative; }
-        
-        /* Background repete Eroblack */
         #bg-pattern {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             display: flex; flex-wrap: wrap; justify-content: space-around;
-            align-content: space-around; opacity: 0.07; pointer-events: none; z-index: 1;
+            align-content: space-around; opacity: 0.06; pointer-events: none; z-index: 1;
         }
-        .bg-item { font-size: 14px; font-weight: bold; letter-spacing: 2px; }
-
+        .bg-item { font-size: 12px; font-weight: bold; letter-spacing: 1px; }
         #ui { position: absolute; top: 15px; width: 100%; text-align: center; z-index: 10; pointer-events: none; }
-        .stat { font-size: 18px; font-weight: 900; text-transform: uppercase; margin: 2px; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); }
+        .stat { font-size: 18px; font-weight: 900; text-transform: uppercase; margin: 2px; text-shadow: 2px 2px 4px #000; }
         #difficulty { color: #00d4ff; font-size: 14px; }
     </style>
 </head>
@@ -31,9 +27,8 @@
     <canvas id="gameCanvas"></canvas>
 
 <script>
-// Kreye background repete a dinamikman
 const bgPattern = document.getElementById("bg-pattern");
-for (let i = 0; i < 150; i++) {
+for (let i = 0; i < 120; i++) {
     const span = document.createElement("span");
     span.className = "bg-item";
     span.innerText = "EROBLACK";
@@ -56,7 +51,7 @@ let pointsPerEnemy = 1;
 
 const player = {
     x: canvas.width / 2 - 25,
-    y: canvas.height - 150, // Remonte avyon an pi wo
+    y: canvas.height - 160,
     w: 50,
     h: 50,
     color: "#ff0033"
@@ -65,23 +60,34 @@ const player = {
 const bullets = [];
 const enemies = [];
 
-window.addEventListener("touchmove", (e) => { 
-    player.x = e.touches[0].clientX - player.w / 2; 
-    player.y = e.touches[0].clientY - player.h / 2; // Pèmèt bouje l monte desann tou
-});
-window.addEventListener("mousemove", (e) => { 
-    player.x = e.clientX - player.w / 2; 
-    player.y = e.clientY - player.h / 2;
-});
+// Kontwòl Touch/Mouse
+const moveHandler = (e) => {
+    let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    player.x = clientX - player.w / 2;
+    player.y = clientY - player.h / 2;
+};
+window.addEventListener("touchmove", moveHandler);
+window.addEventListener("mousemove", moveHandler);
 
 function updateDifficulty() {
     let timePassed = Math.floor((Date.now() - startTime) / 1000);
-    let newHP = 10 + (Math.floor(timePassed / 30) * 10);
-    if (newHP > 100) newHP = 100;
+    let newHP = 10 + (Math.floor(timePassed / 25) * 10);
+    
+    if (newHP > 100) newHP = 100; // Limit maksimòm 100
     
     if (newHP !== enemyMaxHP) {
         enemyMaxHP = newHP;
-        pointsPerEnemy = enemyMaxHP >= 50 ? Math.floor(enemyMaxHP / 10) : 1;
+        
+        // Sistèm Eskalad Pwen
+        if (enemyMaxHP < 50) pointsPerEnemy = 1;
+        else if (enemyMaxHP === 50) pointsPerEnemy = 10;
+        else if (enemyMaxHP === 60) pointsPerEnemy = 20;
+        else if (enemyMaxHP === 70) pointsPerEnemy = 30;
+        else if (enemyMaxHP === 80) pointsPerEnemy = 40;
+        else if (enemyMaxHP === 90) pointsPerEnemy = 50;
+        else if (enemyMaxHP === 100) pointsPerEnemy = 60;
+        
         diffEl.innerText = `LVL: ${enemyMaxHP} | PTS: ${pointsPerEnemy}`;
     }
 }
@@ -95,27 +101,28 @@ function spawnEnemy() {
         w: size,
         h: size,
         hp: enemyMaxHP,
-        speed: 2 + (Math.random() * 1.5)
+        // VITÈS RALANTI (LENT)
+        speed: 0.8 + (Math.random() * 0.7)
     });
 }
-setInterval(spawnEnemy, 1200);
+setInterval(spawnEnemy, 1400);
 
 function shoot() {
     if (gameActive) {
-        bullets.push({ x: player.x + player.w / 2 - 3, y: player.y, w: 6, h: 20, speed: 15 });
+        bullets.push({ x: player.x + player.w / 2 - 3, y: player.y, w: 6, h: 20, speed: 12 });
     }
 }
-setInterval(shoot, 150);
+setInterval(shoot, 160);
 
 function update() {
     if (!gameActive) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     updateDifficulty();
 
-    // Desine Avyon Eroblack
+    // Avyon
     ctx.fillStyle = player.color;
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = "#ff0033";
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = player.color;
     ctx.beginPath();
     ctx.moveTo(player.x + player.w / 2, player.y);
     ctx.lineTo(player.x, player.y + player.h);
@@ -132,26 +139,24 @@ function update() {
         if (b.y < 0) bullets.splice(i, 1);
     }
 
-    // Lènmi (Kare)
+    // Lènmi
     for (let i = enemies.length - 1; i >= 0; i--) {
         let en = enemies[i];
         en.y += en.speed;
         
-        // Chanje koulè si li rive 50+
-        ctx.fillStyle = en.hp >= 50 ? "#ffcc00" : "#333";
+        ctx.fillStyle = en.hp >= 50 ? "#ffcc00" : "#222";
         ctx.strokeStyle = "#fff";
-        ctx.lineWidth = 3;
+        ctx.lineWidth = en.hp >= 50 ? 4 : 2;
         ctx.strokeRect(en.x, en.y, en.w, en.h);
         ctx.fillRect(en.x, en.y, en.w, en.h);
         
-        // Tèks HP (Pi gwo si HP a wo)
         ctx.fillStyle = "white";
-        let fontSize = en.hp >= 50 ? "24px" : "18px";
+        let fontSize = en.hp >= 50 ? "26px" : "18px";
         ctx.font = `bold ${fontSize} Arial`;
         ctx.textAlign = "center";
         ctx.fillText(en.hp, en.x + en.w/2, en.y + en.h/2 + 8);
 
-        // Check Hit
+        // Hit detect
         for (let j = bullets.length - 1; j >= 0; j--) {
             let b = bullets[j];
             if (b.x < en.x + en.w && b.x + b.w > en.x && b.y < en.y + en.h && b.y + b.h > en.y) {
@@ -168,14 +173,13 @@ function update() {
 
         if (en && player.x < en.x + en.w && player.x + player.w > en.x && player.y < en.y + en.h && player.y + player.h > en.y) {
             gameActive = false;
-            alert("GAME OVER\nScore final: " + score);
+            alert("GAME OVER\nScore: " + score);
             location.reload();
         }
         if (en.y > canvas.height) enemies.splice(i, 1);
     }
     requestAnimationFrame(update);
 }
-
 update();
 </script>
 </body>
