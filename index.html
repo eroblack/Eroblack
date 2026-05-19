@@ -3,27 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eroblack Heavy Strike</title>
+    <title>Eroblack Extreme Challenge</title>
     <style>
-        body { margin: 0; background: #020205; color: white; font-family: sans-serif; overflow: hidden; touch-action: none; }
+        body { margin: 0; background: #050510; color: white; font-family: 'Arial', sans-serif; overflow: hidden; touch-action: none; }
         canvas { display: block; }
-        #ui { position: absolute; top: 10px; width: 100%; text-align: center; font-size: 24px; font-weight: bold; pointer-events: none; text-shadow: 2px 2px #000; }
+        #ui { position: absolute; top: 10px; width: 100%; text-align: center; pointer-events: none; }
+        .stat { font-size: 20px; font-weight: bold; text-shadow: 2px 2px #000; margin: 5px; }
+        #difficulty { color: #ffcc00; }
     </style>
 </head>
 <body>
-    <div id="ui">Pwen: <span id="score">0</span></div>
+    <div id="ui">
+        <div class="stat">Pwen: <span id="score">0</span></div>
+        <div class="stat" id="difficulty">Lavi Lènmi: 10 bal</div>
+    </div>
     <canvas id="gameCanvas"></canvas>
 
 <script>
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 const scoreEl = document.getElementById("score");
+const diffEl = document.getElementById("difficulty");
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 let score = 0;
 let gameActive = true;
+let startTime = Date.now();
+let enemyMaxHP = 10; // Kòmanse nan 10
 
 const player = {
     x: canvas.width / 2 - 25,
@@ -36,35 +44,52 @@ const player = {
 const bullets = [];
 const enemies = [];
 
+// Kontwòl
 window.addEventListener("touchmove", (e) => { player.x = e.touches[0].clientX - player.w / 2; });
 window.addEventListener("mousemove", (e) => { player.x = e.clientX - player.w / 2; });
 
+// FONKSYON POU OGMANTE DIFIKILTE CHAK 60 SEGONE
+function updateDifficulty() {
+    if (!gameActive) return;
+    let timePassed = Math.floor((Date.now() - startTime) / 1000); // Segonn ki pase
+    
+    // Chak 60 segonn, ogmante HP pa 10
+    let newHP = 10 + (Math.floor(timePassed / 60) * 10);
+    
+    if (newHP !== enemyMaxHP) {
+        enemyMaxHP = newHP;
+        diffEl.innerText = "Lavi Lènmi: " + enemyMaxHP + " bal";
+    }
+}
+
 function spawnEnemy() {
     if (!gameActive) return;
-    const size = 50;
+    const size = 60;
     enemies.push({
         x: Math.random() * (canvas.width - size),
         y: -size,
         w: size,
         h: size,
-        hp: 10, // Li bezwen 10 kout bal pou l mouri
-        speed: 2
+        hp: enemyMaxHP, // Lènmi an pran HP ki nan nivo aktyèl la
+        speed: 1.5 + (Math.random() * 1) // Vitès la varye yon ti kras
     });
 }
-setInterval(spawnEnemy, 1200);
+setInterval(spawnEnemy, 1500);
 
 function shoot() {
     if (gameActive) {
-        bullets.push({ x: player.x + player.w / 2 - 2, y: player.y, w: 6, h: 15, speed: 10 });
+        bullets.push({ x: player.x + player.w / 2 - 2, y: player.y, w: 6, h: 18, speed: 12 });
     }
 }
-setInterval(shoot, 150); // Li tire vit pou ka bay 10 kout yo fasil
+setInterval(shoot, 120); // Tire rapid pou ka jere gwo HP yo
 
 function update() {
     if (!gameActive) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    updateDifficulty();
 
-    // Desine Avyon Wouj
+    // Desine Avyon
     ctx.fillStyle = player.color;
     ctx.beginPath();
     ctx.moveTo(player.x + player.w / 2, player.y);
@@ -76,43 +101,46 @@ function update() {
     for (let i = bullets.length - 1; i >= 0; i--) {
         let b = bullets[i];
         b.y -= b.speed;
-        ctx.fillStyle = "#00FFFF"; 
+        ctx.fillStyle = "#00FF00"; // Bal vèt
         ctx.fillRect(b.x, b.y, b.w, b.h);
         if (b.y < 0) bullets.splice(i, 1);
     }
 
-    // Jere Obstak yo
+    // Jere Obstak
     for (let i = enemies.length - 1; i >= 0; i--) {
         let en = enemies[i];
         en.y += en.speed;
         
-        // Koulè a chanje selon kantite HP ki rete (li vin pi blan lè l ap mouri)
-        let colorValue = 255 - (en.hp * 20);
-        ctx.fillStyle = `rgb(100, ${colorValue}, ${colorValue})`;
+        // Koulè a klere plis lè HP a ap desann
+        let damageFlash = 255 - ( (en.hp / enemyMaxHP) * 150 );
+        ctx.fillStyle = `rgb(${damageFlash}, 70, 70)`;
+        ctx.strokeStyle = "white";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(en.x, en.y, en.w, en.h);
         ctx.fillRect(en.x, en.y, en.w, en.h);
         
-        // Montre kantite kou ki rete sou obstak la
+        // Montre konbe bal ki rete pou kraze l
         ctx.fillStyle = "white";
-        ctx.font = "12px Arial";
-        ctx.fillText(en.hp, en.x + 20, en.y + 30);
+        ctx.font = "bold 16px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(en.hp, en.x + en.w/2, en.y + en.h/2 + 5);
 
-        // Kolizyon Bal ak Obstak
+        // Kolizyon
         for (let j = bullets.length - 1; j >= 0; j--) {
             let b = bullets[j];
             if (b.x < en.x + en.w && b.x + b.w > en.x && b.y < en.y + en.h && b.y + b.h > en.y) {
-                en.hp -= 1; // Retire 1 nan 10 lavi yo
+                en.hp -= 1;
                 bullets.splice(j, 1);
                 
                 if (en.hp <= 0) {
                     enemies.splice(i, 1);
-                    score += 1; // Bay 1 sèl pwen
+                    score += 1;
                     scoreEl.innerText = score;
                 }
                 break;
             }
         }
 
-        // Kolizyon ak Avyon an
         if (en && player.x < en.x + en.w && player.x + player.w > en.x && player.y < en.y + en.h && player.y + player.h > en.y) {
             gameOver();
         }
@@ -125,7 +153,7 @@ function update() {
 
 function gameOver() {
     gameActive = false;
-    alert("Jwèt Fini! Pwen: " + score);
+    alert("Ou pèdi! \nNivo maksimòm lavi: " + enemyMaxHP + " bal\nPwen: " + score);
     location.reload();
 }
 
