@@ -3,137 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eroblack Air Strike</title>
+    <title>Eroblack Sky Defender</title>
     <style>
-        body { margin: 0; background: #000; color: white; font-family: sans-serif; overflow: hidden; touch-action: none; }
-        canvas { display: block; background: linear-gradient(to right, #000428, #004e92); }
-        #ui { position: absolute; top: 10px; left: 10px; font-size: 20px; pointer-events: none; }
+        body { margin: 0; background: #010b1a; color: white; font-family: sans-serif; overflow: hidden; touch-action: none; }
+        canvas { display: block; }
+        #ui { position: absolute; top: 10px; width: 100%; text-align: center; font-size: 22px; font-weight: bold; pointer-events: none; }
     </style>
 </head>
 <body>
-    <div id="ui">Pwen: <span id="score">0</span> | Lavi: <span id="lives">3</span></div>
+    <div id="ui">Pwen: <span id="score">0</span></div>
     <canvas id="gameCanvas"></canvas>
 
 <script>
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 const scoreEl = document.getElementById("score");
-const livesEl = document.getElementById("lives");
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 let score = 0;
-let lives = 3;
 let gameActive = true;
 
-const player = { x: 50, y: canvas.height / 2, w: 40, h: 30, speed: 7 };
+// Avyon an (li anba nèt)
+const player = {
+    x: canvas.width / 2 - 25,
+    y: canvas.height - 80,
+    w: 50,
+    h: 50,
+    color: "#FF0000" // Avyon Wouj
+};
+
 const bullets = [];
 const enemies = [];
-const particles = [];
-let boss = null;
 
-// Kontwòl Tactile pou Mobile
-window.addEventListener("mousemove", (e) => { player.y = e.clientY; player.x = e.clientX; });
+// Kontwòl ak dwèt (Mobile) oswa Mouse (PC)
 window.addEventListener("touchmove", (e) => {
-    player.y = e.touches[0].clientY;
-    player.x = e.touches[0].clientX;
+    let touchX = e.touches[0].clientX;
+    player.x = touchX - player.w / 2;
+});
+window.addEventListener("mousemove", (e) => {
+    player.x = e.clientX - player.w / 2;
 });
 
+// Fonksyon pou kreye lènmi k ap sot anlè
 function spawnEnemy() {
-    if (!boss) {
-        enemies.push({
-            x: canvas.width,
-            y: Math.random() * (canvas.height - 30),
-            w: 30, h: 30, speed: 3 + (score / 100)
+    if (!gameActive) return;
+    const size = 40;
+    enemies.push({
+        x: Math.random() * (canvas.width - size),
+        y: -size,
+        w: size,
+        h: size,
+        speed: 3 + (score / 100)
+    });
+}
+setInterval(spawnEnemy, 800); // Yon lènmi chak 0.8 segonn
+
+// Fonksyon pou tire anlè otomatikman
+function shoot() {
+    if (gameActive) {
+        bullets.push({ 
+            x: player.x + player.w / 2 - 2, 
+            y: player.y, 
+            w: 5, 
+            h: 15, 
+            speed: 8 
         });
     }
 }
-setInterval(spawnEnemy, 1000);
-
-function shoot() {
-    if (gameActive) bullets.push({ x: player.x + player.w, y: player.y, w: 10, h: 4, speed: 10 });
-}
-setInterval(shoot, 250);
+setInterval(shoot, 300); // Yon bal chak 0.3 segonn
 
 function update() {
     if (!gameActive) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Desine Player (Avyon)
-    ctx.fillStyle = "#00FF00";
+    // 1. Desine Avyon Wouj la (triyang)
+    ctx.fillStyle = player.color;
     ctx.beginPath();
-    ctx.moveTo(player.x, player.y - 15);
-    ctx.lineTo(player.x + 40, player.y);
-    ctx.lineTo(player.x, player.y + 15);
+    ctx.moveTo(player.x + player.w / 2, player.y);
+    ctx.lineTo(player.x, player.y + player.h);
+    ctx.lineTo(player.x + player.w, player.y + player.h);
+    ctx.closePath();
     ctx.fill();
 
-    // Jere Bal
-    bullets.forEach((b, bi) => {
-        b.x += b.speed;
-        ctx.fillStyle = "yellow";
+    // 2. Jere Bal yo (monte anlè)
+    for (let i = bullets.length - 1; i >= 0; i--) {
+        let b = bullets[i];
+        b.y -= b.speed;
+        ctx.fillStyle = "#FFFF00"; // Bal jòn
         ctx.fillRect(b.x, b.y, b.w, b.h);
-        if (b.x > canvas.width) bullets.splice(bi, 1);
-    });
 
-    // Jere Lènmi
-    enemies.forEach((en, ei) => {
-        en.x -= en.speed;
-        ctx.fillStyle = "red";
+        if (b.y < 0) bullets.splice(i, 1);
+    }
+
+    // 3. Jere Lènmi yo (desann anba)
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        let en = enemies[i];
+        en.y += en.speed;
+        ctx.fillStyle = "#555"; // Koulè obstak yo
         ctx.fillRect(en.x, en.y, en.w, en.h);
 
-        // Kolizyon Bal ak Lènmi
-        bullets.forEach((b, bi) => {
+        // Detekte si bal frape lènmi
+        for (let j = bullets.length - 1; j >= 0; j--) {
+            let b = bullets[j];
             if (b.x < en.x + en.w && b.x + b.w > en.x && b.y < en.y + en.h && b.y + b.h > en.y) {
-                enemies.splice(ei, 1);
-                bullets.splice(bi, 1);
+                enemies.splice(i, 1);
+                bullets.splice(j, 1);
                 score += 10;
                 scoreEl.innerText = score;
-                if (score % 200 === 0 && score > 0) spawnBoss();
+                break;
             }
-        });
-
-        // Kolizyon Lènmi ak Player
-        if (player.x < en.x + en.w && player.x + 30 > en.x && player.y - 15 < en.y + en.h && player.y + 15 > en.y) {
-            enemies.splice(ei, 1);
-            lives--;
-            livesEl.innerText = lives;
-            if (lives <= 0) gameOver();
         }
-        if (en.x < 0) enemies.splice(ei, 1);
-    });
 
-    // Sistèm Boss
-    if (boss) {
-        ctx.fillStyle = "purple";
-        ctx.fillRect(boss.x, boss.y, boss.w, boss.h);
-        boss.y += boss.dy;
-        if (boss.y <= 0 || boss.y + boss.h >= canvas.height) boss.dy *= -1;
+        // Detekte si lènmi frape avyon an
+        if (en && player.x < en.x + en.w && player.x + player.w > en.x && player.y < en.y + en.h && player.y + player.h > en.y) {
+            gameOver();
+        }
 
-        bullets.forEach((b, bi) => {
-            if (b.x < boss.x + boss.w && b.x + b.w > boss.x && b.y < boss.y + boss.h && b.y + b.h > boss.y) {
-                boss.hp--;
-                bullets.splice(bi, 1);
-                if (boss.hp <= 0) {
-                    score += 100;
-                    scoreEl.innerText = score;
-                    boss = null;
-                }
-            }
-        });
+        // Retire lènmi ki depase ekran an
+        if (en.y > canvas.height) enemies.splice(i, 1);
     }
 
     requestAnimationFrame(update);
 }
 
-function spawnBoss() {
-    boss = { x: canvas.width - 100, y: 50, w: 80, h: 80, hp: 50, dy: 3 };
-}
-
 function gameOver() {
     gameActive = false;
-    alert("Game Over! Pwen ou se: " + score);
-    location.reload();
+    alert("Ou pèdi! Pwen ou se: " + score);
+    location.reload(); // Rekòmanse jwèt la
 }
 
 update();
