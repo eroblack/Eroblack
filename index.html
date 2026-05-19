@@ -1,154 +1,142 @@
 <!DOCTYPE html>
-<html lang="kmw">
+<html lang="ht">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eroblack Runner</title>
+    <title>Eroblack Air Strike</title>
     <style>
-        * { padding: 0; margin: 0; overflow: hidden; }
-        body { 
-            background-color: #f0f0f0; 
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-        #gameCanvas {
-            background-color: #fff;
-            border-bottom: 2px solid #333;
-            display: block;
-        }
-        .score {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            font-size: 20px;
-            font-weight: bold;
-            color: #333;
-        }
+        body { margin: 0; background: #000; color: white; font-family: sans-serif; overflow: hidden; touch-action: none; }
+        canvas { display: block; background: linear-gradient(to right, #000428, #004e92); }
+        #ui { position: absolute; top: 10px; left: 10px; font-size: 20px; pointer-events: none; }
     </style>
 </head>
 <body>
-
-    <div class="score">Pwen: <span id="scoreVal">0</span></div>
+    <div id="ui">Pwen: <span id="score">0</span> | Lavi: <span id="lives">3</span></div>
     <canvas id="gameCanvas"></canvas>
 
-    <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
-        const scoreElement = document.getElementById("scoreVal");
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const scoreEl = document.getElementById("score");
+const livesEl = document.getElementById("lives");
 
-        // Ajiste gwosè ekran an
-        canvas.width = window.innerWidth;
-        canvas.height = 300;
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-        let score = 0;
-        let gameSpeed = 5;
-        let isGameOver = false;
+let score = 0;
+let lives = 3;
+let gameActive = true;
 
-        // Karaktè a
-        const player = {
-            x: 50,
-            y: canvas.height - 50,
-            width: 40,
-            height: 40,
-            color: "#FF0000",
-            dy: 0,
-            jumpForce: 12,
-            gravity: 0.6,
-            grounded: false
-        };
+const player = { x: 50, y: canvas.height / 2, w: 40, h: 30, speed: 7 };
+const bullets = [];
+const enemies = [];
+const particles = [];
+let boss = null;
 
-        // Obstak yo
-        const obstacles = [];
-        function spawnObstacle() {
-            let size = Math.random() * (50 - 20) + 20;
-            obstacles.push({
-                x: canvas.width,
-                y: canvas.height - size,
-                width: size,
-                height: size,
-                color: "#333"
-            });
-        }
+// Kontwòl Tactile pou Mobile
+window.addEventListener("mousemove", (e) => { player.y = e.clientY; player.x = e.clientX; });
+window.addEventListener("touchmove", (e) => {
+    player.y = e.touches[0].clientY;
+    player.x = e.touches[0].clientX;
+});
 
-        // Kontwòl sote (Touch oswa Klik)
-        window.addEventListener("mousedown", jump);
-        window.addEventListener("touchstart", (e) => {
-            e.preventDefault();
-            jump();
+function spawnEnemy() {
+    if (!boss) {
+        enemies.push({
+            x: canvas.width,
+            y: Math.random() * (canvas.height - 30),
+            w: 30, h: 30, speed: 3 + (score / 100)
+        });
+    }
+}
+setInterval(spawnEnemy, 1000);
+
+function shoot() {
+    if (gameActive) bullets.push({ x: player.x + player.w, y: player.y, w: 10, h: 4, speed: 10 });
+}
+setInterval(shoot, 250);
+
+function update() {
+    if (!gameActive) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Desine Player (Avyon)
+    ctx.fillStyle = "#00FF00";
+    ctx.beginPath();
+    ctx.moveTo(player.x, player.y - 15);
+    ctx.lineTo(player.x + 40, player.y);
+    ctx.lineTo(player.x, player.y + 15);
+    ctx.fill();
+
+    // Jere Bal
+    bullets.forEach((b, bi) => {
+        b.x += b.speed;
+        ctx.fillStyle = "yellow";
+        ctx.fillRect(b.x, b.y, b.w, b.h);
+        if (b.x > canvas.width) bullets.splice(bi, 1);
+    });
+
+    // Jere Lènmi
+    enemies.forEach((en, ei) => {
+        en.x -= en.speed;
+        ctx.fillStyle = "red";
+        ctx.fillRect(en.x, en.y, en.w, en.h);
+
+        // Kolizyon Bal ak Lènmi
+        bullets.forEach((b, bi) => {
+            if (b.x < en.x + en.w && b.x + b.w > en.x && b.y < en.y + en.h && b.y + b.h > en.y) {
+                enemies.splice(ei, 1);
+                bullets.splice(bi, 1);
+                score += 10;
+                scoreEl.innerText = score;
+                if (score % 200 === 0 && score > 0) spawnBoss();
+            }
         });
 
-        function jump() {
-            if (player.grounded && !isGameOver) {
-                player.dy = -player.jumpForce;
-                player.grounded = false;
-            } else if (isGameOver) {
-                resetGame();
-            }
+        // Kolizyon Lènmi ak Player
+        if (player.x < en.x + en.w && player.x + 30 > en.x && player.y - 15 < en.y + en.h && player.y + 15 > en.y) {
+            enemies.splice(ei, 1);
+            lives--;
+            livesEl.innerText = lives;
+            if (lives <= 0) gameOver();
         }
+        if (en.x < 0) enemies.splice(ei, 1);
+    });
 
-        function resetGame() {
-            score = 0;
-            obstacles.length = 0;
-            gameSpeed = 5;
-            isGameOver = false;
-            requestAnimationFrame(update);
-        }
+    // Sistèm Boss
+    if (boss) {
+        ctx.fillStyle = "purple";
+        ctx.fillRect(boss.x, boss.y, boss.w, boss.h);
+        boss.y += boss.dy;
+        if (boss.y <= 0 || boss.y + boss.h >= canvas.height) boss.dy *= -1;
 
-        function update() {
-            if (isGameOver) return;
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Gravite ak Mouvman
-            player.dy += player.gravity;
-            player.y += player.dy;
-
-            if (player.y + player.height > canvas.height) {
-                player.y = canvas.height - player.height;
-                player.dy = 0;
-                player.grounded = true;
-            }
-
-            // Desine Karaktè a
-            ctx.fillStyle = player.color;
-            ctx.fillRect(player.x, player.y, player.width, player.height);
-
-            // Jere Obstak
-            if (Math.random() < 0.01) spawnObstacle();
-
-            for (let i = obstacles.length - 1; i >= 0; i--) {
-                let o = obstacles[i];
-                o.x -= gameSpeed;
-
-                ctx.fillStyle = o.color;
-                ctx.fillRect(o.x, o.y, o.width, o.height);
-
-                // Detekte Kolizyon
-                if (
-                    player.x < o.x + o.width &&
-                    player.x + player.width > o.x &&
-                    player.y < o.y + o.height &&
-                    player.y + player.height > o.y
-                ) {
-                    isGameOver = true;
-                    alert("Game Over! Pwen ou se: " + Math.floor(score));
-                }
-
-                if (o.x + o.width < 0) {
-                    obstacles.splice(i, 1);
-                    score += 1;
-                    gameSpeed += 0.1; // Ogmante difikilte dousman
+        bullets.forEach((b, bi) => {
+            if (b.x < boss.x + boss.w && b.x + b.w > boss.x && b.y < boss.y + boss.h && b.y + b.h > boss.y) {
+                boss.hp--;
+                bullets.splice(bi, 1);
+                if (boss.hp <= 0) {
+                    score += 100;
+                    scoreEl.innerText = score;
+                    boss = null;
                 }
             }
+        });
+    }
 
-            scoreElement.innerText = Math.floor(score);
-            requestAnimationFrame(update);
-        }
+    requestAnimationFrame(update);
+}
 
-        update();
-    </script>
+function spawnBoss() {
+    boss = { x: canvas.width - 100, y: 50, w: 80, h: 80, hp: 50, dy: 3 };
+}
+
+function gameOver() {
+    gameActive = false;
+    alert("Game Over! Pwen ou se: " + score);
+    location.reload();
+}
+
+update();
+</script>
 </body>
 </html>
