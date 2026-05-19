@@ -3,26 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eroblack Extreme Challenge</title>
+    <title>Eroblack Score Evolution</title>
     <style>
         body { margin: 0; background: #050510; color: white; font-family: 'Arial', sans-serif; overflow: hidden; touch-action: none; }
         canvas { display: block; }
         #ui { position: absolute; top: 10px; width: 100%; text-align: center; pointer-events: none; }
-        .stat { font-size: 20px; font-weight: bold; text-shadow: 2px 2px #000; margin: 5px; }
-        #difficulty { color: #ffcc00; }
+        .stat { font-size: 22px; font-weight: bold; text-shadow: 2px 2px #000; margin: 5px; }
+        #difficulty { color: #00ffff; }
+        #score-val { color: #00ff00; font-size: 30px; }
     </style>
 </head>
 <body>
     <div id="ui">
-        <div class="stat">Pwen: <span id="score">0</span></div>
-        <div class="stat" id="difficulty">Lavi Lènmi: 10 bal</div>
+        <div class="stat">Pwen: <span id="score-val">0</span></div>
+        <div class="stat" id="difficulty">Lavi Lènmi: 10 bal (+1 pt)</div>
     </div>
     <canvas id="gameCanvas"></canvas>
 
 <script>
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-const scoreEl = document.getElementById("score");
+const scoreEl = document.getElementById("score-val");
 const diffEl = document.getElementById("difficulty");
 
 canvas.width = window.innerWidth;
@@ -31,11 +32,11 @@ canvas.height = window.innerHeight;
 let score = 0;
 let gameActive = true;
 let startTime = Date.now();
-let enemyMaxHP = 10; // Kòmanse nan 10
+let enemyMaxHP = 10; 
 
 const player = {
     x: canvas.width / 2 - 25,
-    y: canvas.height - 80,
+    y: canvas.height - 100,
     w: 50,
     h: 50,
     color: "#FF0000"
@@ -48,17 +49,22 @@ const enemies = [];
 window.addEventListener("touchmove", (e) => { player.x = e.touches[0].clientX - player.w / 2; });
 window.addEventListener("mousemove", (e) => { player.x = e.clientX - player.w / 2; });
 
-// FONKSYON POU OGMANTE DIFIKILTE CHAK 60 SEGONE
 function updateDifficulty() {
     if (!gameActive) return;
-    let timePassed = Math.floor((Date.now() - startTime) / 1000); // Segonn ki pase
+    let timePassed = Math.floor((Date.now() - startTime) / 1000); 
     
-    // Chak 60 segonn, ogmante HP pa 10
+    // Ogmante HP pa 10 chak 60 segonn
     let newHP = 10 + (Math.floor(timePassed / 60) * 10);
     
     if (newHP !== enemyMaxHP) {
         enemyMaxHP = newHP;
-        diffEl.innerText = "Lavi Lènmi: " + enemyMaxHP + " bal";
+        
+        // Kalkile valè pwen an pou afiche l
+        let pointValue = 1;
+        if (enemyMaxHP >= 50) {
+            pointValue = Math.floor(enemyMaxHP / 50) * 5;
+        }
+        diffEl.innerText = `Lavi Lènmi: ${enemyMaxHP} bal (+${pointValue} pts)`;
     }
 }
 
@@ -70,62 +76,54 @@ function spawnEnemy() {
         y: -size,
         w: size,
         h: size,
-        hp: enemyMaxHP, // Lènmi an pran HP ki nan nivo aktyèl la
-        speed: 1.5 + (Math.random() * 1) // Vitès la varye yon ti kras
+        hp: enemyMaxHP,
+        maxHpRef: enemyMaxHP, // Nou garde sa pou konnen konbe pwen pou n bay
+        speed: 1.8
     });
 }
 setInterval(spawnEnemy, 1500);
 
 function shoot() {
     if (gameActive) {
-        bullets.push({ x: player.x + player.w / 2 - 2, y: player.y, w: 6, h: 18, speed: 12 });
+        bullets.push({ x: player.x + player.w / 2 - 3, y: player.y, w: 6, h: 20, speed: 15 });
     }
 }
-setInterval(shoot, 120); // Tire rapid pou ka jere gwo HP yo
+setInterval(shoot, 130);
 
 function update() {
     if (!gameActive) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
     updateDifficulty();
 
-    // Desine Avyon
+    // Avyon
     ctx.fillStyle = player.color;
-    ctx.beginPath();
-    ctx.moveTo(player.x + player.w / 2, player.y);
-    ctx.lineTo(player.x, player.y + player.h);
-    ctx.lineTo(player.x + player.w, player.y + player.h);
-    ctx.fill();
+    ctx.fillRect(player.x, player.y, player.w, player.h);
 
-    // Jere Bal
+    // Bal
     for (let i = bullets.length - 1; i >= 0; i--) {
         let b = bullets[i];
         b.y -= b.speed;
-        ctx.fillStyle = "#00FF00"; // Bal vèt
+        ctx.fillStyle = "#ffff00";
         ctx.fillRect(b.x, b.y, b.w, b.h);
         if (b.y < 0) bullets.splice(i, 1);
     }
 
-    // Jere Obstak
+    // Lènmi
     for (let i = enemies.length - 1; i >= 0; i--) {
         let en = enemies[i];
         en.y += en.speed;
         
-        // Koulè a klere plis lè HP a ap desann
-        let damageFlash = 255 - ( (en.hp / enemyMaxHP) * 150 );
-        ctx.fillStyle = `rgb(${damageFlash}, 70, 70)`;
-        ctx.strokeStyle = "white";
-        ctx.lineWidth = 2;
+        ctx.fillStyle = "#333";
+        ctx.strokeStyle = en.maxHpRef >= 50 ? "#00ff00" : "white";
+        ctx.lineWidth = 3;
         ctx.strokeRect(en.x, en.y, en.w, en.h);
         ctx.fillRect(en.x, en.y, en.w, en.h);
         
-        // Montre konbe bal ki rete pou kraze l
         ctx.fillStyle = "white";
         ctx.font = "bold 16px Arial";
         ctx.textAlign = "center";
         ctx.fillText(en.hp, en.x + en.w/2, en.y + en.h/2 + 5);
 
-        // Kolizyon
         for (let j = bullets.length - 1; j >= 0; j--) {
             let b = bullets[j];
             if (b.x < en.x + en.w && b.x + b.w > en.x && b.y < en.y + en.h && b.y + b.h > en.y) {
@@ -133,9 +131,16 @@ function update() {
                 bullets.splice(j, 1);
                 
                 if (en.hp <= 0) {
-                    enemies.splice(i, 1);
-                    score += 1;
+                    // SISTÈM PWEN YO:
+                    let pointsToAdd = 1;
+                    if (en.maxHpRef >= 50) {
+                        // Si se 50 li bay 5, si se 100 li bay 10...
+                        pointsToAdd = Math.floor(en.maxHpRef / 50) * 5;
+                    }
+                    
+                    score += pointsToAdd;
                     scoreEl.innerText = score;
+                    enemies.splice(i, 1);
                 }
                 break;
             }
@@ -144,16 +149,14 @@ function update() {
         if (en && player.x < en.x + en.w && player.x + player.w > en.x && player.y < en.y + en.h && player.y + player.h > en.y) {
             gameOver();
         }
-
         if (en.y > canvas.height) enemies.splice(i, 1);
     }
-
     requestAnimationFrame(update);
 }
 
 function gameOver() {
     gameActive = false;
-    alert("Ou pèdi! \nNivo maksimòm lavi: " + enemyMaxHP + " bal\nPwen: " + score);
+    alert("Game Over!\nPwen final: " + score);
     location.reload();
 }
 
