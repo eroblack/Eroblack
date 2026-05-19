@@ -1,96 +1,154 @@
 <!DOCTYPE html>
-<html lang="ht">
+<html lang="kmw">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login Multi-User</title>
+    <title>Eroblack Runner</title>
     <style>
-        body {
+        * { padding: 0; margin: 0; overflow: hidden; }
+        body { 
+            background-color: #f0f0f0; 
             font-family: Arial, sans-serif;
-            background: #f0f2f5;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            margin: 0;
         }
-        .login-box {
-            background: white;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            width: 85%;
-            max-width: 350px;
-            text-align: center;
+        #gameCanvas {
+            background-color: #fff;
+            border-bottom: 2px solid #333;
+            display: block;
         }
-        input {
-            width: 100%;
-            padding: 12px;
-            margin: 8px 0;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            box-sizing: border-box;
+        .score {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
         }
-        button {
-            width: 100%;
-            padding: 12px;
-            background-color: #075e54;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        #error { color: red; font-size: 13px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-<div class="login-box">
-    <h3>Antre Enfòmasyon yo</h3>
-    <input type="tel" id="phone" placeholder="Nimewo telefòn">
-    <input type="password" id="password" placeholder="Modpas">
-    <button onclick="checkLogin()">Konekte</button>
-    <p id="error"></p>
-</div>
+    <div class="score">Pwen: <span id="scoreVal">0</span></div>
+    <canvas id="gameCanvas"></canvas>
 
-<script>
-    // Isit la ou ka ajoute kantite nimewo ou vle
-    // "NIMÈWO" : "MODPAS"
-    const database = {
-        "12345678": "3579",
-        "87654321": "D468",
-        "11223344": "5566",
-        "50944445555": "pass123"
-    };
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const scoreElement = document.getElementById("scoreVal");
 
-    function checkLogin() {
-        const phoneInput = document.getElementById('phone').value.trim();
-        const passInput = document.getElementById('password').value.trim();
-        const errorMsg = document.getElementById('error');
+        // Ajiste gwosè ekran an
+        canvas.width = window.innerWidth;
+        canvas.height = 300;
 
-        // Tcheke si nimewo a egziste nan database la
-        if (database.hasOwnProperty(phoneInput)) {
-            
-            // Si nimewo a la, tcheke si modpas la koresponn
-            if (database[phoneInput] === passInput) {
-                errorMsg.style.color = "green";
-                errorMsg.innerHTML = "OK! Remplissage en cours...";
-                
-                // Voye nimewo a nan EdittextA nan Sketchware
-                if (window.Android) {
-                    window.Android.voyeNimewo(phoneInput);
-                }
-            } else {
-                errorMsg.style.color = "red";
-                errorMsg.innerHTML = "Modpas la pa kòrèk pou nimewo sa!";
-            }
-        } else {
-            errorMsg.style.color = "red";
-            errorMsg.innerHTML = "Nimewo sa pa anrejistre nan sistèm nan!";
+        let score = 0;
+        let gameSpeed = 5;
+        let isGameOver = false;
+
+        // Karaktè a
+        const player = {
+            x: 50,
+            y: canvas.height - 50,
+            width: 40,
+            height: 40,
+            color: "#FF0000",
+            dy: 0,
+            jumpForce: 12,
+            gravity: 0.6,
+            grounded: false
+        };
+
+        // Obstak yo
+        const obstacles = [];
+        function spawnObstacle() {
+            let size = Math.random() * (50 - 20) + 20;
+            obstacles.push({
+                x: canvas.width,
+                y: canvas.height - size,
+                width: size,
+                height: size,
+                color: "#333"
+            });
         }
-    }
-</script>
 
+        // Kontwòl sote (Touch oswa Klik)
+        window.addEventListener("mousedown", jump);
+        window.addEventListener("touchstart", (e) => {
+            e.preventDefault();
+            jump();
+        });
+
+        function jump() {
+            if (player.grounded && !isGameOver) {
+                player.dy = -player.jumpForce;
+                player.grounded = false;
+            } else if (isGameOver) {
+                resetGame();
+            }
+        }
+
+        function resetGame() {
+            score = 0;
+            obstacles.length = 0;
+            gameSpeed = 5;
+            isGameOver = false;
+            requestAnimationFrame(update);
+        }
+
+        function update() {
+            if (isGameOver) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Gravite ak Mouvman
+            player.dy += player.gravity;
+            player.y += player.dy;
+
+            if (player.y + player.height > canvas.height) {
+                player.y = canvas.height - player.height;
+                player.dy = 0;
+                player.grounded = true;
+            }
+
+            // Desine Karaktè a
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+
+            // Jere Obstak
+            if (Math.random() < 0.01) spawnObstacle();
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                let o = obstacles[i];
+                o.x -= gameSpeed;
+
+                ctx.fillStyle = o.color;
+                ctx.fillRect(o.x, o.y, o.width, o.height);
+
+                // Detekte Kolizyon
+                if (
+                    player.x < o.x + o.width &&
+                    player.x + player.width > o.x &&
+                    player.y < o.y + o.height &&
+                    player.y + player.height > o.y
+                ) {
+                    isGameOver = true;
+                    alert("Game Over! Pwen ou se: " + Math.floor(score));
+                }
+
+                if (o.x + o.width < 0) {
+                    obstacles.splice(i, 1);
+                    score += 1;
+                    gameSpeed += 0.1; // Ogmante difikilte dousman
+                }
+            }
+
+            scoreElement.innerText = Math.floor(score);
+            requestAnimationFrame(update);
+        }
+
+        update();
+    </script>
 </body>
 </html>
