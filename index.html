@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eroblack Sky Defender</title>
+    <title>Eroblack Heavy Strike</title>
     <style>
-        body { margin: 0; background: #010b1a; color: white; font-family: sans-serif; overflow: hidden; touch-action: none; }
+        body { margin: 0; background: #020205; color: white; font-family: sans-serif; overflow: hidden; touch-action: none; }
         canvas { display: block; }
-        #ui { position: absolute; top: 10px; width: 100%; text-align: center; font-size: 22px; font-weight: bold; pointer-events: none; }
+        #ui { position: absolute; top: 10px; width: 100%; text-align: center; font-size: 24px; font-weight: bold; pointer-events: none; text-shadow: 2px 2px #000; }
     </style>
 </head>
 <body>
@@ -25,103 +25,98 @@ canvas.height = window.innerHeight;
 let score = 0;
 let gameActive = true;
 
-// Avyon an (li anba nèt)
 const player = {
     x: canvas.width / 2 - 25,
     y: canvas.height - 80,
     w: 50,
     h: 50,
-    color: "#FF0000" // Avyon Wouj
+    color: "#FF0000"
 };
 
 const bullets = [];
 const enemies = [];
 
-// Kontwòl ak dwèt (Mobile) oswa Mouse (PC)
-window.addEventListener("touchmove", (e) => {
-    let touchX = e.touches[0].clientX;
-    player.x = touchX - player.w / 2;
-});
-window.addEventListener("mousemove", (e) => {
-    player.x = e.clientX - player.w / 2;
-});
+window.addEventListener("touchmove", (e) => { player.x = e.touches[0].clientX - player.w / 2; });
+window.addEventListener("mousemove", (e) => { player.x = e.clientX - player.w / 2; });
 
-// Fonksyon pou kreye lènmi k ap sot anlè
 function spawnEnemy() {
     if (!gameActive) return;
-    const size = 40;
+    const size = 50;
     enemies.push({
         x: Math.random() * (canvas.width - size),
         y: -size,
         w: size,
         h: size,
-        speed: 3 + (score / 100)
+        hp: 10, // Li bezwen 10 kout bal pou l mouri
+        speed: 2
     });
 }
-setInterval(spawnEnemy, 800); // Yon lènmi chak 0.8 segonn
+setInterval(spawnEnemy, 1200);
 
-// Fonksyon pou tire anlè otomatikman
 function shoot() {
     if (gameActive) {
-        bullets.push({ 
-            x: player.x + player.w / 2 - 2, 
-            y: player.y, 
-            w: 5, 
-            h: 15, 
-            speed: 8 
-        });
+        bullets.push({ x: player.x + player.w / 2 - 2, y: player.y, w: 6, h: 15, speed: 10 });
     }
 }
-setInterval(shoot, 300); // Yon bal chak 0.3 segonn
+setInterval(shoot, 150); // Li tire vit pou ka bay 10 kout yo fasil
 
 function update() {
     if (!gameActive) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 1. Desine Avyon Wouj la (triyang)
+    // Desine Avyon Wouj
     ctx.fillStyle = player.color;
     ctx.beginPath();
     ctx.moveTo(player.x + player.w / 2, player.y);
     ctx.lineTo(player.x, player.y + player.h);
     ctx.lineTo(player.x + player.w, player.y + player.h);
-    ctx.closePath();
     ctx.fill();
 
-    // 2. Jere Bal yo (monte anlè)
+    // Jere Bal
     for (let i = bullets.length - 1; i >= 0; i--) {
         let b = bullets[i];
         b.y -= b.speed;
-        ctx.fillStyle = "#FFFF00"; // Bal jòn
+        ctx.fillStyle = "#00FFFF"; 
         ctx.fillRect(b.x, b.y, b.w, b.h);
-
         if (b.y < 0) bullets.splice(i, 1);
     }
 
-    // 3. Jere Lènmi yo (desann anba)
+    // Jere Obstak yo
     for (let i = enemies.length - 1; i >= 0; i--) {
         let en = enemies[i];
         en.y += en.speed;
-        ctx.fillStyle = "#555"; // Koulè obstak yo
+        
+        // Koulè a chanje selon kantite HP ki rete (li vin pi blan lè l ap mouri)
+        let colorValue = 255 - (en.hp * 20);
+        ctx.fillStyle = `rgb(100, ${colorValue}, ${colorValue})`;
         ctx.fillRect(en.x, en.y, en.w, en.h);
+        
+        // Montre kantite kou ki rete sou obstak la
+        ctx.fillStyle = "white";
+        ctx.font = "12px Arial";
+        ctx.fillText(en.hp, en.x + 20, en.y + 30);
 
-        // Detekte si bal frape lènmi
+        // Kolizyon Bal ak Obstak
         for (let j = bullets.length - 1; j >= 0; j--) {
             let b = bullets[j];
             if (b.x < en.x + en.w && b.x + b.w > en.x && b.y < en.y + en.h && b.y + b.h > en.y) {
-                enemies.splice(i, 1);
+                en.hp -= 1; // Retire 1 nan 10 lavi yo
                 bullets.splice(j, 1);
-                score += 10;
-                scoreEl.innerText = score;
+                
+                if (en.hp <= 0) {
+                    enemies.splice(i, 1);
+                    score += 1; // Bay 1 sèl pwen
+                    scoreEl.innerText = score;
+                }
                 break;
             }
         }
 
-        // Detekte si lènmi frape avyon an
+        // Kolizyon ak Avyon an
         if (en && player.x < en.x + en.w && player.x + player.w > en.x && player.y < en.y + en.h && player.y + player.h > en.y) {
             gameOver();
         }
 
-        // Retire lènmi ki depase ekran an
         if (en.y > canvas.height) enemies.splice(i, 1);
     }
 
@@ -130,8 +125,8 @@ function update() {
 
 function gameOver() {
     gameActive = false;
-    alert("Ou pèdi! Pwen ou se: " + score);
-    location.reload(); // Rekòmanse jwèt la
+    alert("Jwèt Fini! Pwen: " + score);
+    location.reload();
 }
 
 update();
